@@ -1,134 +1,111 @@
 package com.example.dailyflow_projet;
 
-import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.NetworkCapabilities;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Spinner;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Switch;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private RecyclerView recyclerView;
-    private SwipeRefreshLayout swipeRefreshLayout;
-    private Spinner spinner;
+    private FirebaseAuth mAuth;
     private FirebaseFirestore db;
-    private List<Task> taskList;
+
+    private EditText titleInput, dueDateInput, priorityInput;
+    private Switch completedSwitch;
+    private Button addButton;
+
+    private RecyclerView recyclerView;
     private TaskAdapter taskAdapter;
+    private List<Task> taskList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        System.out.println("MainActivity: onCreate started");
-        setContentView(R.layout.activity_main);
-        System.out.println("MainActivity: Layout set");
+        setContentView(R.layout.activity_main); // Make sure you have this layout with the correct views
 
-        // Initialize Firestore
+        // Initialize Firebase
+        mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
-        System.out.println("MainActivity: Firestore initialized");
 
-        // Initialize UI components
+        // UI components
+        titleInput = findViewById(R.id.titleInput);
+        dueDateInput = findViewById(R.id.dueDateInput);
+        priorityInput = findViewById(R.id.priorityInput);
+        completedSwitch = findViewById(R.id.completedSwitch);
+        addButton = findViewById(R.id.addButton);
+
         recyclerView = findViewById(R.id.recyclerView);
-        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
-        spinner = findViewById(R.id.filterSpinner);
-        System.out.println("MainActivity: UI components initialized");
-
-        // Initialize task list and adapter
-        taskList = new ArrayList<>();
-        System.out.println("MainActivity: taskList initialized");
-        taskAdapter = new TaskAdapter(taskList);
-        System.out.println("MainActivity: taskAdapter initialized");
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        taskList = new ArrayList<>();
+        taskAdapter = new TaskAdapter(taskList);
         recyclerView.setAdapter(taskAdapter);
-        System.out.println("MainActivity: RecyclerView set up");
 
-        //  Spinner for filtering
-        String[] filterOptions = {"All", "Completed", "High Priority"};
-        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, filterOptions);
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(spinnerAdapter);
-        System.out.println("MainActivity: Spinner set up");
+        // Add Task Button Click
+        addButton.setOnClickListener(v -> addTask());
 
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String filter = parent.getItemAtPosition(position).toString();
-                applyFilter(filter);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
-        });
-
-
-        swipeRefreshLayout.setOnRefreshListener(() -> {
-            applyFilter(spinner.getSelectedItem().toString());
-            swipeRefreshLayout.setRefreshing(false);
-        });
-        System.out.println("MainActivity: SwipeRefreshLayout set up");
-
-
-        applyFilter("All");
-        System.out.println("MainActivity: Initial filter applied");
+        // Load existing tasks
+        loadTasks();
     }
 
-    private void applyFilter(String filter) {
-        System.out.println("applyFilter: Starting with filter = " + filter);
-        if (!isInternetAvailable()) {
-            System.out.println("applyFilter: No internet connection");
-            Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show();
+    private void addTask() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "User not authenticated", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String userId = "user123";
-        System.out.println("applyFilter: userId = " + userId);
-        Query query;
-        if ("Completed".equals(filter)) {
-            query = db.collection("Task").whereEqualTo("userId", userId).whereEqualTo("completed", true);
-        } else if ("High Priority".equals(filter)) {
-            query = db.collection("Task").whereEqualTo("userId", userId).whereEqualTo("priority", "High");
-        } else {
-            query = db.collection("Task").whereEqualTo("userId", userId);
-        }
-        System.out.println("applyFilter: Query created");
+        String title = titleInput.getText().toString().trim();
+        String dueDate = dueDateInput.getText().toString().trim();
+        String priority = priorityInput.getText().toString().trim();
+        boolean completed = completedSwitch.isChecked();
+        String userId = currentUser.getUid();
 
-        query.get()
-                .addOnSuccessListener(result -> {
-                    System.out.println("Firestore: Found " + result.size() + " tasks");
-                    taskList.clear();
-                    System.out.println("applyFilter: taskList cleared");
-                    for (QueryDocumentSnapshot document : result) {
-                        Task task = document.toObject(Task.class);
-                        taskList.add(task);
-                        System.out.println("applyFilter: Added task - " + task.getTitle());
-                    }
-                    if (taskList.isEmpty()) {
-                        Toast.makeText(this, "No tasks found", Toast.LENGTH_SHORT).show();
-                    }
-                    taskAdapter.notifyDataSetChanged();
-                    System.out.println("applyFilter: Adapter notified");
+        if (title.isEmpty() || dueDate.isEmpty() || priority.isEmpty()) {
+            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Task task = new Task(title, dueDate, priority, completed, userId);
+        db.collection("Task")
+                .add(task)
+                .addOnSuccessListener(documentReference -> {
+                    Toast.makeText(this, "Task added", Toast.LENGTH_SHORT).show();
+                    loadTasks(); // Refresh list
                 })
-                .addOnFailureListener(e -> {
-                    System.out.println("Firestore Error: " + e.getMessage());
-                    Toast.makeText(this, "Failed to load tasks: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to add task", Toast.LENGTH_SHORT).show());
     }
 
-    private boolean isInternetAvailable() {
-        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.getActiveNetwork());
-        return capabilities != null && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+    private void loadTasks() {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) return;
+
+        db.collection("Task")
+                .whereEqualTo("userId", currentUser.getUid())
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    taskList.clear();
+                    for (DocumentSnapshot document : queryDocumentSnapshots) {
+                        Task task = document.toObject(Task.class);
+                        taskList.add(task);
+                    }
+                    taskAdapter.notifyDataSetChanged();
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to load tasks", Toast.LENGTH_SHORT).show());
     }
 }
