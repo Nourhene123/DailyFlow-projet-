@@ -1,8 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <item name="colorPrimary">#0288D1</item>
-        <item name="colorPrimaryDark">#01579B</item>
-        <item name="colorAccent">#FF5722</item>
-        <item name="android:windowBackground">@drawable/background_gradient</item>
+    <!-- Base application theme -->
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/primary_color</item>
+        <item name="colorPrimaryVariant">@color/primary_light</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorAccent">@color/accent_color</item>
+        <item name="android:background">@color/background_color</item>
     </style>
 </resources>

@@ -1,21 +1,19 @@
 package com.example.dailyflow_projet;
 
+import com.google.firebase.firestore.Exclude;
+
 public class Task {
     private String title;
     private String dueDate;
     private String priority;
     private boolean completed;
     private String userId;
+    @Exclude
+    private String documentId;
 
 
-    public Task() {
-        this.title = "";
-        this.dueDate = "";
-        this.priority = "";
-        this.completed = false;
-        this.userId = "";
-    }
 
+    public Task(){}
 
     public Task(String title, String dueDate, String priority, boolean completed, String userId) {
         this.title = title;
@@ -25,7 +23,15 @@ public class Task {
         this.userId = userId;
     }
 
+    @Exclude
+    public String getDocumentId() {
+        return documentId;
+    }
 
+    @Exclude
+    public void setDocumentId(String documentId) {
+        this.documentId = documentId;
+    }
     public String getTitle() {
         return title;
     }
@@ -66,4 +72,5 @@ public class Task {
     public void setUserId(String userId) {
         this.userId = userId;
     }
+
 }

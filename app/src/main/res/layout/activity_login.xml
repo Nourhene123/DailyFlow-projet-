@@ -4,34 +4,53 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:padding="24dp">
+    android:padding="24dp"
+    android:background="@color/background_color">
 
-    <EditText
-        android:id="@+id/email_input"
-        android:hint="Email"
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:inputType="textEmailAddress" />
+        android:hint="Email">
 
-    <EditText
-        android:id="@+id/password_input"
-        android:hint="Password"
+        <EditText
+            android:id="@+id/email_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textEmailAddress"
+            android:textColor="@color/text_color"
+            android:textSize="16sp"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:inputType="textPassword"
-        android:layout_marginTop="12dp"/>
+        android:layout_marginTop="12dp"
+        android:hint="Password">
 
-    <Button
+        <EditText
+            android:id="@+id/password_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPassword"
+            android:textColor="@color/text_color"
+            android:textSize="16sp"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/login_button"
         android:text="Login"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"/>
+        android:layout_marginTop="20dp"
+        android:backgroundTint="@color/primary_color"
+        android:textColor="@android:color/white"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/register_button"
         android:text="Register"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"/>
+        android:layout_marginTop="8dp"
+        android:backgroundTint="@color/primary_light"
+        android:textColor="@color/text_color"/>
 </LinearLayout>

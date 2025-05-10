@@ -1,16 +1,15 @@
 package com.example.dailyflow_projet;
 
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -28,15 +27,15 @@ public class MainActivity extends AppCompatActivity {
     private EditText titleInput, dueDateInput, priorityInput;
     private Switch completedSwitch;
     private Button addButton;
-
     private RecyclerView recyclerView;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private TaskAdapter taskAdapter;
     private List<Task> taskList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main); // Make sure you have this layout with the correct views
+        setContentView(R.layout.activity_main);
 
         // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
@@ -48,10 +47,10 @@ public class MainActivity extends AppCompatActivity {
         priorityInput = findViewById(R.id.priorityInput);
         completedSwitch = findViewById(R.id.completedSwitch);
         addButton = findViewById(R.id.addButton);
-
         recyclerView = findViewById(R.id.recyclerView);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
 
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
         taskList = new ArrayList<>();
         taskAdapter = new TaskAdapter(taskList);
         recyclerView.setAdapter(taskAdapter);
@@ -59,7 +58,20 @@ public class MainActivity extends AppCompatActivity {
         // Add Task Button Click
         addButton.setOnClickListener(v -> addTask());
 
+        // Swipe to Refresh
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            loadTasks();
+            swipeRefreshLayout.setRefreshing(false);
+        });
+
         // Load existing tasks
+        loadTasks();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Refresh tasks when returning from EditTaskActivity
         loadTasks();
     }
 
@@ -93,7 +105,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadTasks() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser == null) return;
+        if (currentUser == null) {
+            Toast.makeText(this, "User not authenticated", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         db.collection("Task")
                 .whereEqualTo("userId", currentUser.getUid())
@@ -102,9 +117,10 @@ public class MainActivity extends AppCompatActivity {
                     taskList.clear();
                     for (DocumentSnapshot document : queryDocumentSnapshots) {
                         Task task = document.toObject(Task.class);
+                        task.setDocumentId(document.getId());
                         taskList.add(task);
                     }
-                    taskAdapter.notifyDataSetChanged();
+                    taskAdapter.updateTasks(taskList);
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to load tasks", Toast.LENGTH_SHORT).show());
     }
